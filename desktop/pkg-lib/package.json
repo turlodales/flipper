@@ -19,7 +19,7 @@
     "@types/jest": "^25.1.0",
     "@types/node": "^13.7.5",
     "globby": "^10",
-    "jest": "^25.1.0",
+    "jest": "^26.0.1",
     "prettier": "^2.0.0",
     "rimraf": "^3.0.2",
     "ts-jest": "^26.0.0",
