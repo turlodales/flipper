@@ -10,7 +10,7 @@
   "bugs": "https://github.com/facebook/flipper/issues",
   "dependencies": {
     "flipper-babel-transformer": "0.51.0",
-    "fs-extra": "^8.1.0",
+    "fs-extra": "^9.0.1",
     "metro": "^0.60.0",
     "metro-minify-terser": "^0.60.0"
   },
