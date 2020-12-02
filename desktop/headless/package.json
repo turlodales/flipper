@@ -11,7 +11,7 @@
     "node-fetch": "^2.6.1",
     "redux": "^4.0.0",
     "remote-redux-devtools": "^0.5.16",
-    "ws": "^7.3.0",
+    "ws": "^7.4.0",
     "yargs": "^15.4.1"
   }
 }
