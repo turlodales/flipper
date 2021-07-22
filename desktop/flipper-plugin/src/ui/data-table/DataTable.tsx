@@ -20,11 +20,15 @@ import React, {
   useReducer,
 } from 'react';
 import {TableRow, DEFAULT_ROW_HEIGHT} from './TableRow';
-import {DataSource} from '../../state/DataSource';
 import {Layout} from '../Layout';
 import {TableHead} from './TableHead';
 import {Percentage} from '../../utils/widthUtils';
-import {DataSourceRenderer, DataSourceVirtualizer} from './DataSourceRenderer';
+import {
+  DataSourceRendererVirtual,
+  DataSourceRendererStatic,
+  DataSource,
+  DataSourceVirtualizer,
+} from '../../data-source/index';
 import {
   computeDataTableFilter,
   createDataTableManager,
@@ -44,10 +48,10 @@ import {Typography} from 'antd';
 import {CoffeeOutlined, SearchOutlined, PushpinFilled} from '@ant-design/icons';
 import {useAssertStableRef} from '../../utils/useAssertStableRef';
 import {Formatter} from '../DataFormatter';
-import {usePluginInstance} from '../../plugin/PluginContext';
+import {usePluginInstanceMaybe} from '../../plugin/PluginContext';
 import {debounce} from 'lodash';
-import {StaticDataSourceRenderer} from './StaticDataSourceRenderer';
-import {useInUnitTest} from '../../utils/useInUnitTest()';
+import {useInUnitTest} from '../../utils/useInUnitTest';
+import {createDataSource} from 'flipper-plugin/src/state/createDataSource';
 
 interface DataTableBaseProps<T = any> {
   columns: DataTableColumn<T>[];
@@ -55,6 +59,8 @@ interface DataTableBaseProps<T = any> {
   enableAutoScroll?: boolean;
   enableColumnHeaders?: boolean;
   enableMultiSelect?: boolean;
+  enableContextMenu?: boolean;
+  enablePersistSettings?: boolean;
   // if set (the default) will grow and become scrollable. Otherwise will use natural size
   scrollable?: boolean;
   extraActions?: React.ReactElement;
@@ -63,9 +69,7 @@ interface DataTableBaseProps<T = any> {
   tableManagerRef?: RefObject<DataTableManager<T> | undefined>; // Actually we want a MutableRefObject, but that is not what React.createRef() returns, and we don't want to put the burden on the plugin dev to cast it...
   onCopyRows?(records: T[]): string;
   onContextMenu?: (selection: undefined | T) => React.ReactElement;
-  onRenderEmpty?:
-    | null
-    | ((dataSource?: DataSource<T, any, any>) => React.ReactElement);
+  onRenderEmpty?: null | ((dataSource?: DataSource<T>) => React.ReactElement);
 }
 
 export type ItemRenderer<T> = (
@@ -76,7 +80,7 @@ export type ItemRenderer<T> = (
 
 type DataTableInput<T = any> =
   | {
-      dataSource: DataSource<T, any, any>;
+      dataSource: DataSource<T>;
       records?: undefined;
       recordsKey?: undefined;
     }
@@ -102,6 +106,7 @@ export type DataTableColumn<T = any> = {
     enabled: boolean;
     predefined?: boolean;
   }[];
+  inversed?: boolean;
 };
 
 export interface TableRowRenderContext<T = any> {
@@ -117,6 +122,7 @@ export interface TableRowRenderContext<T = any> {
     itemId: number,
   ): void;
   onRowStyle?(item: T): React.CSSProperties | undefined;
+  onContextMenu?(): React.ReactElement;
 }
 
 export type DataTableProps<T> = DataTableInput<T> & DataTableBaseProps<T>;
@@ -136,7 +142,7 @@ export function DataTable<T extends object>(
   const isUnitTest = useInUnitTest();
 
   // eslint-disable-next-line
-  const scope = isUnitTest ? "" : usePluginInstance().pluginKey;
+  const scope = isUnitTest ? "" : usePluginInstanceMaybe()?.pluginKey ?? "";
   const virtualizerRef = useRef<DataSourceVirtualizer | undefined>();
   const [tableState, dispatch] = useReducer(
     dataTableManagerReducer as DataTableReducer<T>,
@@ -149,6 +155,7 @@ export function DataTable<T extends object>(
         scope,
         virtualizerRef,
         autoScroll: props.enableAutoScroll,
+        enablePersistSettings: props.enablePersistSettings,
       }),
   );
 
@@ -173,22 +180,30 @@ export function DataTable<T extends object>(
 
   const renderingConfig = useMemo<TableRowRenderContext<T>>(() => {
     let startIndex = 0;
+
     return {
       columns: visibleColumns,
       onMouseEnter(e, _item, index) {
-        if (dragging.current && e.buttons === 1) {
+        if (dragging.current && e.buttons === 1 && props.enableMultiSelect) {
           // by computing range we make sure no intermediate items are missed when scrolling fast
           tableManager.addRangeToSelection(startIndex, index);
         }
       },
       onMouseDown(e, _item, index) {
+        if (!props.enableMultiSelect && e.buttons > 1) {
+          tableManager.selectItem(index, false, true);
+          return;
+        }
         if (!dragging.current) {
-          if (e.ctrlKey || e.metaKey) {
+          if (e.buttons > 1) {
+            // for right click we only want to add if needed, not deselect
+            tableManager.addRangeToSelection(index, index, false);
+          } else if (e.ctrlKey || e.metaKey) {
             tableManager.addRangeToSelection(index, index, true);
           } else if (e.shiftKey) {
-            tableManager.selectItem(index, true);
+            tableManager.selectItem(index, true, true);
           } else {
-            tableManager.selectItem(index);
+            tableManager.selectItem(index, false, true);
           }
 
           dragging.current = true;
@@ -203,8 +218,21 @@ export function DataTable<T extends object>(
         }
       },
       onRowStyle,
+      onContextMenu: props.enableContextMenu
+        ? () => {
+            // using a ref keeps the config stable, so that a new context menu doesn't need
+            // all rows to be rerendered, but rather shows it conditionally
+            return contextMenuRef.current?.()!;
+          }
+        : undefined,
     };
-  }, [visibleColumns, tableManager, onRowStyle]);
+  }, [
+    visibleColumns,
+    tableManager,
+    onRowStyle,
+    props.enableContextMenu,
+    props.enableMultiSelect,
+  ]);
 
   const itemRenderer = useCallback(
     function itemRenderer(
@@ -236,7 +264,12 @@ export function DataTable<T extends object>(
       let handled = true;
       const shiftPressed = e.shiftKey;
       const outputSize = dataSource.view.size;
-      const windowSize = virtualizerRef.current!.virtualItems.length;
+      const windowSize = props.scrollable
+        ? virtualizerRef.current?.virtualItems.length ?? 0
+        : dataSource.view.size;
+      if (!windowSize) {
+        return;
+      }
       switch (e.key) {
         case 'ArrowUp':
           tableManager.selectItem(
@@ -280,7 +313,7 @@ export function DataTable<T extends object>(
         e.preventDefault();
       }
     },
-    [dataSource, tableManager],
+    [dataSource, tableManager, props.scrollable],
   );
 
   const [debouncedSetFilter] = useState(() => {
@@ -309,7 +342,7 @@ export function DataTable<T extends object>(
     // Important dep optimization: we don't want to recalc filters if just the width or visibility changes!
     // We pass entire state.columns to computeDataTableFilter, but only changes in the filter are a valid cause to compute a new filter function
     // eslint-disable-next-line
-    [tableState.searchValue, tableState.useRegex, ...tableState.columns.map((c) => c.filters)],
+    [tableState.searchValue, tableState.useRegex, ...tableState.columns.map((c) => c.filters), ...tableState.columns.map((c => c.inversed))],
   );
 
   useEffect(
@@ -325,12 +358,16 @@ export function DataTable<T extends object>(
     [dataSource, tableState.sorting],
   );
 
+  const isMounted = useRef(false);
   useEffect(
     function triggerSelection() {
-      onSelect?.(
-        getSelectedItem(dataSource, tableState.selection),
-        getSelectedItems(dataSource, tableState.selection),
-      );
+      if (isMounted.current) {
+        onSelect?.(
+          getSelectedItem(dataSource, tableState.selection),
+          getSelectedItems(dataSource, tableState.selection),
+        );
+      }
+      isMounted.current = true;
     },
     [onSelect, dataSource, tableState.selection],
   );
@@ -408,6 +445,9 @@ export function DataTable<T extends object>(
         ],
       );
 
+  const contextMenuRef = useRef(contexMenu);
+  contextMenuRef.current = contexMenu;
+
   useEffect(function initialSetup() {
     return function cleanup() {
       // write current prefs to local storage
@@ -432,7 +472,7 @@ export function DataTable<T extends object>(
           searchValue={searchValue}
           useRegex={tableState.useRegex}
           dispatch={dispatch as any}
-          contextMenu={contexMenu}
+          contextMenu={props.enableContextMenu ? contexMenu : undefined}
           extraActions={props.extraActions}
         />
       )}
@@ -458,7 +498,7 @@ export function DataTable<T extends object>(
   const mainSection = props.scrollable ? (
     <Layout.Top>
       {header}
-      <DataSourceRenderer<T, TableRowRenderContext<T>>
+      <DataSourceRendererVirtual<T, TableRowRenderContext<T>>
         dataSource={dataSource}
         autoScroll={tableState.autoScroll && !dragging.current}
         useFixedRowHeight={!tableState.usesWrapping}
@@ -475,7 +515,7 @@ export function DataTable<T extends object>(
   ) : (
     <Layout.Container>
       {header}
-      <StaticDataSourceRenderer<T, TableRowRenderContext<T>>
+      <DataSourceRendererStatic<T, TableRowRenderContext<T>>
         dataSource={dataSource}
         useFixedRowHeight={!tableState.usesWrapping}
         defaultRowHeight={DEFAULT_ROW_HEIGHT}
@@ -512,7 +552,8 @@ DataTable.defaultProps = {
   enableSearchbar: true,
   enableAutoScroll: false,
   enableColumnHeaders: true,
-  eanbleMultiSelect: true,
+  enableMultiSelect: true,
+  enableContextMenu: true,
   onRenderEmpty: emptyRenderer,
 } as Partial<DataTableProps<any>>;
 
@@ -522,11 +563,9 @@ function normalizeDataSourceInput<T>(props: DataTableInput<T>): DataSource<T> {
     return props.dataSource;
   }
   if (props.records) {
-    const [dataSource] = useState(() => {
-      const ds = new DataSource<T>(props.recordsKey);
-      syncRecordsToDataSource(ds, props.records);
-      return ds;
-    });
+    const [dataSource] = useState(() =>
+      createDataSource(props.records, {key: props.recordsKey}),
+    );
     useEffect(() => {
       syncRecordsToDataSource(dataSource, props.records);
     }, [dataSource, props.records]);
@@ -561,7 +600,7 @@ function EmptyTable({dataSource}: {dataSource: DataSource<any>}) {
     <Layout.Container
       center
       style={{width: '100%', padding: 40, color: theme.textColorSecondary}}>
-      {dataSource.records.length === 0 ? (
+      {dataSource.size === 0 ? (
         <>
           <CoffeeOutlined style={{fontSize: '2em', margin: 8}} />
           <Typography.Text type="secondary">No records yet</Typography.Text>

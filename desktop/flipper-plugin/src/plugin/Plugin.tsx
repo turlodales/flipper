@@ -27,7 +27,7 @@ type Message = {
  */
 export interface PluginClient<
   Events extends EventsContract = {},
-  Methods extends MethodsContract = {}
+  Methods extends MethodsContract = {},
 > extends BasePluginClient {
   /**
    * Identifier that uniquely identifies the connected application
@@ -89,11 +89,6 @@ export interface PluginClient<
   supportsMethod(method: keyof Methods): Promise<boolean>;
 
   /**
-   * Checks if the provided plugin is available for the current device / application
-   */
-  isPluginAvailable(pluginId: string): boolean;
-
-  /**
    * opens a different plugin by id, optionally providing a deeplink to bring the plugin to a certain state
    */
   selectPlugin(pluginId: string, deeplinkPayload?: unknown): void;
@@ -113,7 +108,7 @@ export interface RealFlipperClient {
     device_id: string;
   };
   deviceSync: RealFlipperDevice;
-  plugins: string[];
+  plugins: Set<string>;
   isBackgroundPlugin(pluginId: string): boolean;
   initPlugin(pluginId: string): void;
   deinitPlugin(pluginId: string): void;
@@ -128,7 +123,7 @@ export interface RealFlipperClient {
 
 export type PluginFactory<
   Events extends EventsContract,
-  Methods extends MethodsContract
+  Methods extends MethodsContract,
 > = (client: PluginClient<Events, Methods>) => object;
 
 export type FlipperPluginComponent = React.FC<{}>;
@@ -202,22 +197,13 @@ export class SandyPluginInstance extends BasePluginInstance {
           method as any,
         );
       },
-      isPluginAvailable(pluginId: string) {
-        return flipperLib.isPluginAvailable(
+      selectPlugin(pluginId: string, deeplink?: unknown) {
+        flipperLib.selectPlugin(
           realClient.deviceSync,
           realClient,
           pluginId,
+          deeplink,
         );
-      },
-      selectPlugin(pluginId: string, deeplink?: unknown) {
-        if (this.isPluginAvailable(pluginId)) {
-          flipperLib.selectPlugin(
-            realClient.deviceSync,
-            realClient,
-            pluginId,
-            deeplink,
-          );
-        }
       },
     };
     this.initializePlugin(() =>

@@ -90,9 +90,10 @@ export function ManageMockResponsePanel(props: Props) {
       return returnValue;
     });
   }, [props.routes, selectedIdAtom]);
-  const duplicatedIds = useMemo(() => _duplicateIds(props.routes), [
-    props.routes,
-  ]);
+  const duplicatedIds = useMemo(
+    () => _duplicateIds(props.routes),
+    [props.routes],
+  );
 
   const items: RouteItem[] = Object.entries(props.routes).map(
     ([id, route]) => ({
@@ -131,6 +132,15 @@ export function ManageMockResponsePanel(props: Props) {
     [handleDelete, handleToggle],
   );
 
+  const handleSelect = useCallback(
+    (id: string) => {
+      if (id) {
+        selectedIdAtom.set(id);
+      }
+    },
+    [selectedIdAtom],
+  );
+
   return (
     <Layout.Left resizable style={{minHeight: 400}}>
       <Layout.Top>
@@ -147,9 +157,9 @@ export function ManageMockResponsePanel(props: Props) {
             placement="bottom">
             <Button
               onClick={() => {
-                networkRouteManager.copyHighlightedCalls();
+                networkRouteManager.copySelectedCalls();
               }}>
-              Copy Highlighted Calls
+              Copy Selected Calls
             </Button>
           </NUX>
           <Button onClick={networkRouteManager.importRoutes}>Import</Button>
@@ -158,8 +168,9 @@ export function ManageMockResponsePanel(props: Props) {
         </Toolbar>
         <DataList
           items={items}
-          selection={selectedIdAtom}
+          selection={selectedId}
           onRenderItem={handleRender}
+          onSelect={handleSelect}
           scrollable
         />
       </Layout.Top>

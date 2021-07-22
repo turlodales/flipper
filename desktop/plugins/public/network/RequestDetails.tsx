@@ -23,13 +23,7 @@ import {
 } from 'flipper-plugin';
 import {Select, Typography} from 'antd';
 
-import {
-  bodyAsBinary,
-  bodyAsString,
-  formatBytes,
-  getHeaderValue,
-  isTextual,
-} from './utils';
+import {bodyAsBinary, bodyAsString, formatBytes, getHeaderValue} from './utils';
 import {Request, Header, Insights, RetryInsights} from './types';
 import {BodyOptions} from './index';
 import {ProtobufDefinitionsRepository} from './ProtobufDefinitionsRepository';
@@ -95,7 +89,7 @@ export default class RequestDetails extends Component<RequestDetailsProps> {
             key="requestData"
             title={'Request Body'}
             extraActions={
-              isTextual(request.requestHeaders) ? (
+              typeof request.requestData === 'string' ? (
                 <CopyOutlined
                   title="Copy request body"
                   onClick={(e) => {
@@ -129,7 +123,8 @@ export default class RequestDetails extends Component<RequestDetailsProps> {
                 request.responseIsMock ? ' (Mocked)' : ''
               }`}
               extraActions={
-                isTextual(request.responseHeaders) && request.responseData ? (
+                typeof request.responseData === 'string' &&
+                request.responseData ? (
                   <CopyOutlined
                     title="Copy response body"
                     onClick={(e) => {
@@ -390,7 +385,7 @@ class VideoFormatter {
     if (contentType.startsWith('video/')) {
       return (
         <Layout.Container center>
-          <VideoFormatter.Video controls={true}>
+          <VideoFormatter.Video controls>
             <source src={request.url} type={contentType} />
           </VideoFormatter.Video>
         </Layout.Container>
@@ -615,6 +610,7 @@ class GraphQLFormatter {
         const parsedResponses = body
           .replace(/}{/g, '}\r\n{')
           .split('\n')
+          .filter((json) => json.length > 0)
           .map((json) => JSON.parse(json));
         return (
           <div>
@@ -668,17 +664,19 @@ class BinaryFormatter {
 }
 
 class ProtobufFormatter {
-  private protobufDefinitionRepository = ProtobufDefinitionsRepository.getInstance();
+  private protobufDefinitionRepository =
+    ProtobufDefinitionsRepository.getInstance();
 
   formatRequest(request: Request) {
     if (
       getHeaderValue(request.requestHeaders, 'content-type') ===
       'application/x-protobuf'
     ) {
-      const protobufDefinition = this.protobufDefinitionRepository.getRequestType(
-        request.method,
-        request.url,
-      );
+      const protobufDefinition =
+        this.protobufDefinitionRepository.getRequestType(
+          request.method,
+          request.url,
+        );
       if (protobufDefinition == undefined) {
         return (
           <Text>
@@ -708,10 +706,11 @@ class ProtobufFormatter {
         'application/x-protobuf' ||
       request.url.endsWith('.proto')
     ) {
-      const protobufDefinition = this.protobufDefinitionRepository.getResponseType(
-        request.method,
-        request.url,
-      );
+      const protobufDefinition =
+        this.protobufDefinitionRepository.getResponseType(
+          request.method,
+          request.url,
+        );
       if (protobufDefinition == undefined) {
         return (
           <Text>

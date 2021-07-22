@@ -10,9 +10,11 @@
 import React, {CSSProperties, memo} from 'react';
 import styled from '@emotion/styled';
 import {theme} from '../theme';
-import type {TableRowRenderContext} from './DataTable';
+import {DataTableColumn, TableRowRenderContext} from './DataTable';
 import {Width} from '../../utils/widthUtils';
 import {DataFormatter} from '../DataFormatter';
+import {Dropdown} from 'antd';
+import {contextMenuTrigger} from '../data-inspector/DataInspectorNode';
 
 // heuristic for row estimation, should match any future styling updates
 export const DEFAULT_ROW_HEIGHT = 24;
@@ -106,7 +108,7 @@ export const TableRow = memo(function TableRow<T>({
   highlighted,
   config,
 }: TableRowProps<T>) {
-  return (
+  const row = (
     <TableBodyRowContainer
       highlighted={highlighted}
       onMouseDown={(e) => {
@@ -119,9 +121,12 @@ export const TableRow = memo(function TableRow<T>({
       {config.columns
         .filter((col) => col.visible)
         .map((col) => {
-          const value = col.onRender
-            ? (col as any).onRender(record, highlighted, itemIndex)
-            : DataFormatter.format((record as any)[col.key], col.formatters);
+          const value = renderColumnValue<T>(
+            col,
+            record,
+            highlighted,
+            itemIndex,
+          );
 
           return (
             <TableBodyColumnContainer
@@ -135,4 +140,24 @@ export const TableRow = memo(function TableRow<T>({
         })}
     </TableBodyRowContainer>
   );
+  if (config.onContextMenu) {
+    return (
+      <Dropdown overlay={config.onContextMenu} trigger={contextMenuTrigger}>
+        {row}
+      </Dropdown>
+    );
+  } else {
+    return row;
+  }
 });
+
+export function renderColumnValue<T>(
+  col: DataTableColumn<any>,
+  record: T,
+  highlighted: boolean,
+  itemIndex: number,
+) {
+  return col.onRender
+    ? col.onRender(record, highlighted, itemIndex)
+    : DataFormatter.format((record as any)[col.key], col.formatters);
+}

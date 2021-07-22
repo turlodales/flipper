@@ -14,7 +14,7 @@ import {createWriteStream} from 'fs';
 import type {LogLevel, DeviceType} from 'flipper-plugin';
 import which from 'which';
 import {spawn} from 'child_process';
-import {dirname} from 'path';
+import {dirname, join} from 'path';
 import {DeviceSpec} from 'flipper-plugin-lib';
 
 const DEVICE_RECORDING_DIR = '/sdcard/flipper_recorder';
@@ -106,7 +106,7 @@ export default class AndroidDevice extends BaseDevice {
     this.reader = undefined;
   }
 
-  reverse(ports: [number, number]): Promise<void> {
+  reverse(ports: number[]): Promise<void> {
     return Promise.all(
       ports.map((port) =>
         this.adb.reverse(this.serial, `tcp:${port}`, `tcp:${port}`),
@@ -262,6 +262,13 @@ export async function launchEmulator(name: string, coldBoot: boolean = false) {
   // On Linux, you must run the emulator from the directory it's in because
   // reasons ...
   return which('emulator')
+    .catch(() =>
+      join(
+        process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT || '',
+        'tools',
+        'emulator',
+      ),
+    )
     .then((emulatorPath) => {
       if (emulatorPath) {
         const child = spawn(

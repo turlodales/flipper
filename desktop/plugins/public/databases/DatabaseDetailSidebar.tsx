@@ -81,9 +81,7 @@ function buildSidebarRow(key: string, val: Value): TableRow {
       var parsed = JSON.parse(val.value);
     } catch (_error) {}
     if (parsed) {
-      output = (
-        <ManagedDataInspector data={parsed} expandRoot={true} collapsed />
-      );
+      output = <ManagedDataInspector data={parsed} expandRoot collapsed />;
     }
   }
   return {
@@ -186,9 +184,9 @@ export default React.memo(function DatabaseDetailSidebar(
   );
   return (
     <DetailSidebar>
-      <Panel title="Row details" collapsible={true}>
+      <Panel title="Row details" collapsible>
         {onSave ? (
-          <Layout.Right>
+          <Layout.Right center>
             <div />
             {editing ? (
               <Layout.Horizontal pad gap>

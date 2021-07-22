@@ -131,9 +131,9 @@ const QueryHistory = React.memo(({history}: {history: Array<Query>}) => {
         floating={false}
         columns={columns}
         columnSizes={{time: 75}}
-        zebra={true}
+        zebra
         rows={rows}
-        horizontallyScrollable={true}
+        horizontallyScrollable
       />
     </Layout.Horizontal>
   );
@@ -232,12 +232,12 @@ const DataTable = React.memo(
               }),
             {},
           )}
-          zebra={true}
+          zebra
           rows={page.rows.map((row: Array<Value>, index: number) =>
             transformRow(page.columns, row, index),
           )}
-          horizontallyScrollable={true}
-          multiHighlight={true}
+          horizontallyScrollable
+          multiHighlight
           onRowHighlighted={highlightedRowsChanged}
           onSort={sortOrderChanged}
           initialSortOrder={currentSort ?? undefined}
@@ -281,7 +281,7 @@ const QueryTable = React.memo(
         <Layout.Horizontal grow>
           <ManagedTable
             floating={false}
-            multiline={true}
+            multiline
             columnOrder={columns.map((name) => ({
               key: name,
               visible: true,
@@ -291,11 +291,11 @@ const QueryTable = React.memo(
                 Object.assign({}, acc, {[val]: {value: val, resizable: true}}),
               {},
             )}
-            zebra={true}
+            zebra
             rows={rows.map((row: Array<Value>, index: number) =>
               transformRow(columns, row, index),
             )}
-            horizontallyScrollable={true}
+            horizontallyScrollable
             onRowHighlighted={highlightedRowsChanged}
           />
           {table.highlightedRows.length === 1 && (
@@ -332,9 +332,10 @@ const FavoritesMenu = React.memo(
     favorites: string[];
     onClick: (value: string) => void;
   }) => {
-    const onMenuClick = useCallback((p: any) => onClick(p.key as string), [
-      onClick,
-    ]);
+    const onMenuClick = useCallback(
+      (p: any) => onClick(p.key as string),
+      [onClick],
+    );
     return (
       <Menu>
         {favorites.map((q) => (
@@ -488,12 +489,8 @@ export function Component() {
 
   const onRowEdited = useCallback(
     (change: {[key: string]: string | null}) => {
-      const {
-        selectedDatabaseTable,
-        currentStructure,
-        viewMode,
-        currentPage,
-      } = instance.state.get();
+      const {selectedDatabaseTable, currentStructure, viewMode, currentPage} =
+        instance.state.get();
       const highlightedRowIdx = currentPage?.highlightedRows[0] ?? -1;
       const row =
         highlightedRowIdx >= 0
@@ -668,7 +665,8 @@ export function Component() {
             showSearch
             value={selectedDatabaseName}
             onChange={onDatabaseSelected}
-            style={{width: 200}}>
+            style={{flex: 1}}
+            dropdownMatchSelectWidth={false}>
             {databaseOptions}
           </Select>
           <BoldSpan>Table</BoldSpan>
@@ -676,7 +674,8 @@ export function Component() {
             showSearch
             value={selectedTableName}
             onChange={onDatabaseTableSelected}
-            style={{width: 200}}>
+            style={{flex: 1}}
+            dropdownMatchSelectWidth={false}>
             {tableOptions}
           </Select>
           <div />
@@ -693,7 +692,7 @@ export function Component() {
               showSearch
               value={selectedDatabaseName}
               onChange={onDatabaseSelected}
-              style={{width: 200}}>
+              dropdownMatchSelectWidth={false}>
               {databaseOptions}
             </Select>
           </Toolbar>

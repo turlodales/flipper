@@ -16,7 +16,7 @@ import {Logger} from '../fb-interfaces/Logger';
 
 import {LeftRail} from './LeftRail';
 import {useStore, useDispatch} from '../utils/useStore';
-import {ConsoleLogs} from '../chrome/ConsoleLogs';
+import {FlipperDevTools} from '../chrome/FlipperDevTools';
 import {setStaticView} from '../reducers/connections';
 import {
   ACTIVE_SHEET_CHANGELOG_RECENT_ONLY,
@@ -61,10 +61,8 @@ export function SandyApp() {
    * The logic here is to sync both, but without modifying the navigation related reducers to not break classic Flipper.
    * It is possible to simplify this in the future.
    */
-  const [
-    toplevelSelection,
-    setStoredToplevelSelection,
-  ] = useState<ToplevelNavItem>('appinspect');
+  const [toplevelSelection, setStoredToplevelSelection] =
+    useState<ToplevelNavItem>('appinspect');
 
   // Handle toplevel nav clicks from LeftRail
   const setToplevelSelection = useCallback(
@@ -81,7 +79,7 @@ export function SandyApp() {
       }
       switch (newSelection) {
         case 'flipperlogs':
-          dispatch(setStaticView(ConsoleLogs));
+          dispatch(setStaticView(FlipperDevTools));
           break;
         default:
       }
@@ -152,7 +150,6 @@ export function SandyApp() {
           </_Sidebar>
         </Layout.Horizontal>
         <MainContainer>
-          {outOfContentsContainer}
           {staticView ? (
             <TrackingScope
               scope={
@@ -172,8 +169,9 @@ export function SandyApp() {
               )}
             </TrackingScope>
           ) : (
-            <PluginContainer logger={logger} isSandy />
+            <PluginContainer logger={logger} />
           )}
+          {outOfContentsContainer}
         </MainContainer>
       </Layout.Left>
     </Layout.Top>

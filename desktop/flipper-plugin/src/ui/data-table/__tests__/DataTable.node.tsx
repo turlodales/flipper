@@ -10,7 +10,7 @@
 import React, {createRef} from 'react';
 import {DataTable, DataTableColumn} from '../DataTable';
 import {render, act} from '@testing-library/react';
-import {createDataSource} from '../../../state/DataSource';
+import {createDataSource} from '../../../state/createDataSource';
 import {computeDataTableFilter, DataTableManager} from '../DataTableManager';
 import {Button} from 'antd';
 
@@ -50,7 +50,7 @@ test('update and append', async () => {
     expect(elem.length).toBe(1);
     expect(elem[0].parentElement).toMatchInlineSnapshot(`
       <div
-        class="css-1k3kr6b-TableBodyRowContainer e1luu51r1"
+        class="ant-dropdown-trigger css-1k3kr6b-TableBodyRowContainer e1luu51r1"
       >
         <div
           class="css-9bipfg-TableBodyColumnContainer e1luu51r0"
@@ -104,7 +104,7 @@ test('column visibility', async () => {
     expect(elem.length).toBe(1);
     expect(elem[0].parentElement).toMatchInlineSnapshot(`
       <div
-        class="css-1k3kr6b-TableBodyRowContainer e1luu51r1"
+        class="ant-dropdown-trigger css-1k3kr6b-TableBodyRowContainer e1luu51r1"
       >
         <div
           class="css-9bipfg-TableBodyColumnContainer e1luu51r0"
@@ -131,7 +131,7 @@ test('column visibility', async () => {
     expect(elem.length).toBe(1);
     expect(elem[0].parentElement).toMatchInlineSnapshot(`
       <div
-        class="css-1k3kr6b-TableBodyRowContainer e1luu51r1"
+        class="ant-dropdown-trigger css-1k3kr6b-TableBodyRowContainer e1luu51r1"
       >
         <div
           class="css-9bipfg-TableBodyColumnContainer e1luu51r0"
@@ -494,6 +494,40 @@ test('compute filters', () => {
     expect(data.filter(filter)).toEqual([espresso]);
   }
   {
+    // inverse filter
+    const filter = computeDataTableFilter('', false, [
+      {
+        key: 'level',
+        filters: [
+          {
+            enabled: true,
+            value: 'error',
+            label: 'error',
+          },
+        ],
+        inversed: true,
+      },
+    ])!;
+    expect(data.filter(filter)).toEqual([coffee, espresso]);
+  }
+  {
+    // inverse filter with search
+    const filter = computeDataTableFilter('coffee', false, [
+      {
+        key: 'level',
+        filters: [
+          {
+            enabled: true,
+            value: 'error',
+            label: 'error',
+          },
+        ],
+        inversed: true,
+      },
+    ])!;
+    expect(data.filter(filter)).toEqual([coffee]);
+  }
+  {
     const filter = computeDataTableFilter('nonsense', false, [
       {
         key: 'level',
@@ -555,10 +589,7 @@ test('onSelect callback fires, and in order', () => {
     ref.current!.selectItem(2);
   });
 
-  expect(events.splice(0)).toEqual([
-    [undefined, []],
-    [item3, [item3]],
-  ]);
+  expect(events.splice(0)).toEqual([[item3, [item3]]]);
 
   act(() => {
     ref.current!.addRangeToSelection(0, 0);
@@ -606,10 +637,7 @@ test('selection always has the latest state', () => {
     ref.current!.selectItem(2);
   });
 
-  expect(events.splice(0)).toEqual([
-    [undefined, []],
-    [item3, [item3]],
-  ]);
+  expect(events.splice(0)).toEqual([[item3, [item3]]]);
 
   const item3updated = {
     title: 'item 3 updated',

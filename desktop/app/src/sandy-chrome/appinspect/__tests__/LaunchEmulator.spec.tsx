@@ -13,9 +13,9 @@ import {Provider} from 'react-redux';
 import {createStore} from 'redux';
 import {LaunchEmulatorDialog} from '../LaunchEmulator';
 
-import {rootReducer} from '../../../store';
+import {createRootReducer} from '../../../reducers';
 import {act} from 'react-dom/test-utils';
-import {sleep} from '../../../utils';
+import {sleep} from 'flipper-plugin';
 
 jest.mock('../../../devices/AndroidDevice', () => ({
   launchEmulator: jest.fn(() => Promise.resolve([])),
@@ -24,7 +24,7 @@ jest.mock('../../../devices/AndroidDevice', () => ({
 import {launchEmulator} from '../../../devices/AndroidDevice';
 
 test('Can render and launch android apps', async () => {
-  const store = createStore(rootReducer);
+  const store = createStore(createRootReducer());
   const onClose = jest.fn();
 
   const renderer = render(

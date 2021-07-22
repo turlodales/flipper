@@ -8,35 +8,35 @@
  */
 
 import {notification, Typography} from 'antd';
+import {DataSource} from '../data-source/index';
 import React from 'react';
 import {PluginClient} from '../plugin/Plugin';
 import {usePlugin} from '../plugin/PluginContext';
 import {createState} from '../state/atom';
-import {createDataSource, DataSource} from '../state/DataSource';
 import {DataTableColumn} from '../ui/data-table/DataTable';
 import {MasterDetail} from '../ui/MasterDetail';
+import {createDataSource} from '../state/createDataSource';
 
 type PluginResult<Raw, Row> = {
-  plugin(
-    client: PluginClient<Record<string, Raw | {}>>,
-  ): {
+  plugin(client: PluginClient<Record<string, Raw | {}>>): {
     rows: DataSource<Row>;
   };
   Component(): React.ReactElement;
 };
 
 /**
- * createTablePlugin creates a Plugin class which handles fetching data from the client and
- * displaying in in a table. The table handles selection of items and rendering a sidebar where
- * more detailed information can be presented about the selected row.
+ * `createTablePlugin` creates a plugin that handles receiving data from the client and
+ * displaying it in a table. The table handles selection of items, sorting, filtering and
+ * rendering a sidebar where more detailed information can be presented about the selected row.
  *
- * The plugin expects the be able to subscribe to the `method` argument and recieve either an array
- * of data objects or a single data object. Each data object represents a row in the table which is
- * build by calling the `buildRow` function argument.
+ * The plugin expects the be able to subscribe to the `method` argument and receive either single data objects.
+ * Each data object represents a row in the table.
  *
- * An optional resetMethod argument can be provided which will replace the current rows with the
- * data provided. This is useful when connecting to Flipper for this first time, or reconnecting to
- * the client in an unknown state.
+ * An optional `resetMethod` argument can be provided which will replace the current rows with the data provided.
+ * This is useful when connecting to Flipper for this first time, or reconnecting to the client in an unknown state.
+ *
+ * Since the `createTablePlugin` defines both the `plugin` and `Component` for the plugin in one go,
+ * making the result is most easily done by using `module.exports = createTablePlugin(....)` so that both are exported from the plugin package.
  */
 export function createTablePlugin<Row extends object>(props: {
   method: string;
@@ -48,7 +48,7 @@ export function createTablePlugin<Row extends object>(props: {
 }): PluginResult<Row, Row>;
 export function createTablePlugin<
   Raw extends object,
-  Row extends object = Raw
+  Row extends object = Raw,
 >(props: {
   buildRow: (record: Raw) => Row;
   method: string;
@@ -62,7 +62,7 @@ export function createTablePlugin<
   Raw extends object,
   Method extends string,
   ResetMethod extends string,
-  Row extends object = Raw
+  Row extends object = Raw,
 >(props: {
   method: Method;
   resetMethod?: ResetMethod;
@@ -88,7 +88,7 @@ export function createTablePlugin<
       }
       const record = props.buildRow
         ? props.buildRow(event)
-        : ((event as any) as Row);
+        : (event as any as Row);
       if (props.key) {
         rows.upsert(record);
       } else {

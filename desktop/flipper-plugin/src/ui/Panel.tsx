@@ -82,8 +82,8 @@ const StyledCollapse = styled(Collapse)({
     background: theme.backgroundWash,
     paddingTop: theme.space.tiny,
     paddingBottom: theme.space.tiny,
-    paddingLeft: 26,
     fontWeight: 'bold',
+    display: 'flex',
     '> .anticon': {
       padding: `5px 0px`,
       left: 8,
@@ -94,7 +94,8 @@ const StyledCollapse = styled(Collapse)({
   '& > .ant-collapse-item': {
     borderBottom: 'none',
   },
-  '& > .ant-collapse-item > .ant-collapse-content > .ant-collapse-content-box': {
-    padding: 0,
-  },
+  '& > .ant-collapse-item > .ant-collapse-content > .ant-collapse-content-box':
+    {
+      padding: 0,
+    },
 });

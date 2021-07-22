@@ -28,11 +28,10 @@ type Props = {
   onSubmit: (uri: URI) => void;
 };
 
-export default (props: Props) => {
+export function RequiredParametersDialog(props: Props) {
   const {onHide, onSubmit, uri, requiredParameters} = props;
-  const {isValid, values, setValuesArray} = useRequiredParameterFormValidator(
-    requiredParameters,
-  );
+  const {isValid, values, setValuesArray} =
+    useRequiredParameterFormValidator(requiredParameters);
   return (
     <Modal
       visible
@@ -96,4 +95,4 @@ export default (props: Props) => {
       </Layout.Container>
     </Modal>
   );
-};
+}
